@@ -36,7 +36,7 @@ Sparkの仕組み。特に目立った情報はない。他の書籍参考
 ### DataFrames, Datasets, and SparkSQL
 
 SparkSQL（=Dataframe, Datasetsのインターフェース)の理解は、より効率的なストレージオプション、進歩的なオプティマイザー、シリアル化したデータへの直接的なオペレーションと兼ね添えたSparkパフォーマンスの未来だ。  
-これらのコンポーネントは最高のパフォーマンスを手に入れるためにめっちゃ重要(super important)である。
+これらのコンポーネントは最高のパフォーマンスを出すためにめっちゃ重要(super important)である。
 
 (参考)  
 基本的なDataFrame,Datasetとはなんぞやについては以下がわかりやすい。  
