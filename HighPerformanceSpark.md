@@ -1,4 +1,4 @@
-### High Performance Spark
+# High Performance Spark
  
 他の書籍や情報では語られていないことを中心に備忘録として  
 (参考) ← 私の付け足し  
@@ -11,7 +11,7 @@ Spark version 2.0.1以降〜
 [OReilly High Perfomance Spark](https://www.amazon.co.jp/High-Performance-Spark-Practices-Optimizing/dp/1491943203)    
 
   
-###特徴
+### 特徴
 Pure RDDを中心にSparkの内部の動きの理解を深めていく流れ。  
 読者層は中級者以上を想定しているみたいだが、初級者の方がむしろ読んだ方が良い内容かも。
 パフォーマンスのボトルネックとなる要素に絞って要点を説明。
@@ -40,8 +40,7 @@ SparkSQL（=Dataframe, Datasetsのインターフェース)の理解は、より
 
 (参考)  
 基本的なDataFrame,Datasetとはなんぞやについては以下がわかりやすい。  
-[Apache Sparkの3つのAPI: RDD, DataFrameからDatasetへ] 
-(https://yubessy.hatenablog.com/entry/2016/12/11/095915)
+[Apache Sparkの3つのAPI: RDD, DataFrameからDatasetへ](https://yubessy.hatenablog.com/entry/2016/12/11/095915)
 
  
 Spark SQLにはSparkSessionがあり、SparkSQLのエントリーポイントとなっている。
@@ -74,8 +73,7 @@ TungstenはKryoなどに比べてかなり小さいサイズに圧縮してデ�
 
 (参考)  
 Datasetでの詳しい説明に乗っている。  
-[introducing-apache-spark-datasets.] 
- (https://databricks.com/blog/2016/01/04/introducing-apache-spark-datasets.html)
+[introducing-apache-spark-datasets.](https://databricks.com/blog/2016/01/04/introducing-apache-spark-datasets.html)
 
 
 Thungstenのデータ構造は「処理に優しく」をモットーに作成されており、例えば古典的に計算コストの高いソートプログラムに対してもである。  
@@ -117,7 +115,7 @@ spark1.6から2.0になってからかなりパフォーマンスが向上した
 (参考)  
 [apache-spark-as-a-compiler-joining-a-billion-rows-per-second-on-a-laptop](https://databricks.com/blog/2016/05/23/apache-spark-as-a-compiler-joining-a-billion-rows-per-second-on-a-laptop.html)
 
-Optimizeの過程がわかりやすい。
+Optimizeの過程がわかりやすい。  
 [https://www.slideshare.net/maropu0804/spark-70405327](https://www.slideshare.net/maropu0804/spark-70405327)
 
 
@@ -145,6 +143,7 @@ Core sparkの場合は、Sql Optimizerと違ってオペレーションの順序
 通常Joinは、対応するキーがそれぞれのRDDに同じパーティション内にあることが要求されるため高価な処理になる。  
 もしRDDがpartitionを知らなかったら、シャッフルが必要となり両RDDがpartitionの共有をはじめる。  
 partitionが同じかどうかに限らず、片方のRDDがpartitionを知っている場合、narrow dependency(=パーティション間の依存度が下がる)が生成される。  
+
 (参考)  
 [Whats Narrow(Wide) Dependency ??](https://image.slidesharecdn.com/apachespark101-170216211852/95/apache-spark-101-demi-benari-35-638.jpg?cb=1487279996)  
 
