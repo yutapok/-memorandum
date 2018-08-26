@@ -1,10 +1,10 @@
-###[要約/翻訳] High Performance Spark
+### High Performance Spark
  
 他の書籍や情報では語られていないことを中心に備忘録として  
-(参考) ← 私の付け足し
+(参考) ← 私の付け足し  
 
-##書籍　
-###情報
+## 書籍　
+### 情報
 2017出版  
 Spark version 2.0.1以降〜
 
@@ -17,8 +17,8 @@ Pure RDDを中心にSparkの内部の動きの理解を深めていく流れ。
 パフォーマンスのボトルネックとなる要素に絞って要点を説明。
 DataFrameやDatasetのRDDとの違いや利点欠点も述べている。
 
-##第１章 
-###Why Scala
+## 第１章 
+### Why Scala
 本書ではSparkApiを使う言語としてScalaを選定している。  
 また、Sparkのパフォーマンスにこだわりたいなら、Scalaを使用することを強く推奨している。  
 理由は以下  
@@ -28,12 +28,12 @@ DataFrameやDatasetのRDDとの違いや利点欠点も述べている。
 ・Jvmとのコミュニケーションコストがない（pythonや他言語との差別化）  
 
 
-##第２章
+## 第２章
 Sparkの仕組み。特に目立った情報はない。他の書籍参考
 
 
-##第３章
-###DataFrames, Datasets, and SparkSQL
+## 第３章
+### DataFrames, Datasets, and SparkSQL
 
 SparkSQL（=Dataframe, Datasetsのインターフェース)の理解は、より効率的なストレージオプション、進歩的なオプティマイザー、シリアル化したデータへの直接的なオペレーションと兼ね添えたSparkパフォーマンスの未来だ。  
 これらのコンポーネントは最高のパフォーマンスを手に入れるためにめっちゃ重要(super important)である。
@@ -53,7 +53,7 @@ __SparkSQL__:  org.apache.spark.sql.SparkSession
 __SparkCore__:  org.apache.spark.SparkContext
 
 
-###RDDとの違い
+### RDDとの違い
 DataFrameとDatasetにはスキーマ情報が付与されており、このスキーマ情報によってストレージレイヤー処理の効率化（Tungsten）、オプティマイズ(Catalyst)の向上が図られている。
 
 例えば、RDDでの使用に懸念があるgroupByだが、SparkSqlのoptimaizerのおかげでDataframeでは巨大なシャッフルを避る実行プランが組まれ集約処理をしてくれるため、安全に処理される。
@@ -62,7 +62,7 @@ DataFrameとDatasetにはスキーマ情報が付与されており、このス�
 
 
 
-###Tungsten
+### Tungsten
 TungstenはSpark処理を低レイヤーレベルで処理効率上げるSparkSQLのコンポーネントである。
 
 DataframeとDatasetがもつspecialiezed  representation(=Tungsten)はメモリ効率性のみならず、Kryoでさえも凌駕するシリアライズスピードを出すことができる。
@@ -83,7 +83,7 @@ On wire（a way of getting data from point to point:) representationもサポー
 (将来的にTungstenはnon JVMライブラリをより実行可能となるはずだ。BLASや線形代数といったJVMのライブラリはデータをoff heapへのコピーに大半を費やしている。)  
 従来のJavaオブジェクトによるメモリーやガベージコレクションのオーバーヘッドを避けることで、手書きの集計処理よりも巨大なデータセットを処理できるようになっている。  
 
-###Dataset
+### Dataset
 DatasetはSparkSQLの拡張版で、型チェックがコンパイル時に実行される。DatasetApiは強力な型collectionで、かつ整合性と機能的な変換を併せ持っている。また、Datasetも論理プランはCatalyst optimaizeerが構築する。
 Datasetはコンパイル時にsyntax errorとanalysis error(型やパラメータの違い)の両方をチェックしてくれる。
 
@@ -121,7 +121,7 @@ Optimizeの過程がわかりやすい。
 [https://www.slideshare.net/maropu0804/spark-70405327](https://www.slideshare.net/maropu0804/spark-70405327)
 
 
-###Conclusion
+### Conclusion
 * Dataframeの利点は、Tungstenによる効率的なストレージフォーマットと、Catalyst optimizerによる最適化。
 一方欠点は、コンパイル時の型付けが弱いこと。誤ったカラムへのアクセスやそのほか単純なミスに繋がってしまう。
 
@@ -134,14 +134,14 @@ Optimizeの過程がわかりやすい。
 
 
 
-##第４章
-###Join
+## 第４章
+### Join
 joinはspark coreにしろ、spark sqlにしろパフォーマンスにおいて重要になってくる。
 Joinは共通して強力である一方、巨大なネットワーク転送が発生したり、手に負えないほどの巨大なデータセットを作成してしまうことがあるので、パフォーマンスに注意してしなければならない。
 Core sparkの場合は、Sql Optimizerと違ってオペレーションの順序を考えるのが最重要になってくる。
 
 
-###Core Spark Join  
+### Core Spark Join  
 通常Joinは、対応するキーがそれぞれのRDDに同じパーティション内にあることが要求されるため高価な処理になる。  
 もしRDDがpartitionを知らなかったら、シャッフルが必要となり両RDDがpartitionの共有をはじめる。  
 partitionが同じかどうかに限らず、片方のRDDがpartitionを知っている場合、narrow dependency(=パーティション間の依存度が下がる)が生成される。  
