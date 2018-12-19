@@ -1,6 +1,7 @@
 # High Performance Spark
  
-他の書籍や情報では語られていないことを中心に備忘録として  
+他の書籍や情報では語られていないことを中心に備忘録として   
+文書校正していないので訳もまぁまぁ適当です  
 (参考) ← 私の付け足し  
 
 ## 書籍　
@@ -171,4 +172,132 @@ Spark sqlはcore sparkと同じjoinをサポートするが、オプティマイ
 Sparkは時々、よりjoinが効率的になるようオペレーションを後入れ先出ししたり、再構築したりする。  
 一方、partitionerのコントロールはDataframe, Datasetではできない。
 
+## 第５章
+### effective transformation
+Sparkがストレージ上のデータからRDD形式にデータ読み込み、コンピュテーションデータ変換をRDDで行い、結果としてRDDフォーマットにアンリ書き込みが行われるか、もしくはドライバーが寄せ集めるか。したがってSparkのパワーはRDD上で定義されRDDは返されるオペレーションに由来する。  
+
+この章ではRDD変換、連続した変換、評価の方法を紹介する。  
+because it has strong implications for how transformations are evaluated and, consequently, for their performance.  
+
+Narrow dependencyとWide dependencyの区別は、（結果的に結果的にパフォーマンスに関わるが）どう変換が評価されるかのための強力な実装を持つため、重要である。  
+
+簡単にまとめるとWide dependencyはシャッフルを要求し、Narrow dependencyはそうではない。  
+Narrow dependencyの定義は各々の親RDDのパーティションが多かれ１つの子RDDパーティションと馴染みがあるか。  
+Wide Dependencyの定義は複数の子パーティションが各々の親パーティションに依存している状態のこと。  
+
+### Implication for performance
+
+Narrow Dependecyはpartitionをまたがって変換がされないため、Driverとのコミュニケーションコストが発生しない。  
+Wide dependencyはその逆で、machineをまたがって変換が行われる。  
+実際SortByKeyはwide dependencyである。  
+
+
+### Implication for falttorelance
+
+The cost of failure for a partition with wide dependencies is much higher than for one with narrow dependencies, since it requires more partitions to be recomputed  
+
+Wide dependencyによるパーティションの失敗コストはよりパーティションが再計算されることが要求されるため、narrow dependencyと比べ高くなる。  
+
+
+### The special case coalesce
+The coalesce operation is used to change the number of partitions in an RDD  
+coalesceの実行はRDDのパーティション数の変更に使われる。  
+
+coalesceが出力パーティション数をreduceするとき、各々の親パーティションは子パーティションが親パーティションのいくつかを統合したものであるため、１つ確かな子パーティションが使われる。したがってcoalesceはnarrow変換である。  
+
+Coalesceは、シャッフルなしにpartition数を減らすことができる。しかし、coalsceはステージ全体のupstream partitionが同じ平行のレベルで実行する原因となる。いくつかのケースでは望ましくない。  
+？Using coalesce, the number of partitions can decrease in one stage without causing a shuffle. However, coalesce causes the upstream partitions in the entire stage to execute with the level of parallelism assigned by coalesce, which may be undesirable in some cases. Avoid this behavior at the cost of a shuffle by setting the shuffle argument of coalesce to true or by using the repartition func‐ tion instead.  
+
+GCのエラーは失敗の共通原因となる。オブジェクトのサイズを小さくしたり、数を減らしたり、再利用するなどしてGCのオーバーヘッドを防ぐこと。  
+シリアライズエラーや不正確な結果に繋がるため、ミュータブルなデータは避けることがベストである  
+
+mapPartition変換はsparkのなかでもっとも強力だ。ユーザーがパーティション上のに任意のルーチンを提議させることができるため。  
+mapPartition変換はとてもシンプルなデータ変換に使われるが、セカンダリーソートなどの問題を解決するための複雑な、高価なデータ処理にも使われる。  
+
+Scalaのiteratorオブジェクトは実際にはコレクションではないが、collectionの要素へ１つ１つアクセスする処理を定義する関数である。  
+iteratorがimmutableであるだけでなく、iteratorの同じ要素は１度だけアクセスできる。  
+
+つまり、iteratorは１度だけtraversedされる。(scalaのTravesableOnceインターフェースを継承している。)  
+イテレータは保存された状態というよりは実際には評価指標のセットである。  
+an iterator is actually a set of evaluation instructions rather than a stored state  
+結果的に、iterator to iterator変換はSparkがメモリエラーなしに1つのexecutor上のメモリにfitするには大きすぎるパーティションを巧みに扱うことができる。  
+さらに、iteratorとしてpartitionをキープすることはsparkが使うdiskスペースをより選択的にすることができる。  
+(Furthermore, keeping the partition as an iterator allows Spark to use disk space more selectively)  
+
+
+
+## 第６章
+### working with key/vakue data
+Key valueオペレーションはいくつかパフォーマンス問題に繋がる。ほとんどwide transoformationがkey/value変換がもっとも良いチューニング必要で、振る舞いに気をつることを要求することため、key value変換は実際もっとも高くつくオペレーションである。  
+
+(In particular, operations on key/value pairs can cause: Out-of-memory errors in the driver: Out-of-memory errors on the executor nodes :Shuffle failures :“Straggler tasks” or partitions, which are especially slow to comput)  
+
+特に、key valueオペレーションは、driverやexecutor nodeのout of memoryエラーやシャッフルの失敗、タスクやパーティションがはぐれたりする原因となる。  
+
+処理の中で、何度か変換を要求するシャッフルの回数を小さくする１つの方法は、再シャッフルを避けるためnarrow変換をまたがってパーティショニングが保持されていることを明確にすること。  
+(One way to minimize the number of shuffles in a computation that requires several transformations is to make sure to preserve partitioning across narrow transformations to avoid reshuffling data)  
+
+→(多分) 再シャッフルを避けるために、Narrow変換が各partitionで処理されるようRDDがパーティショニングされていることを確認すること。  
+
+時にはシャッフルなしにコンピュテーションを終了することができない。その際にも全てのレコードをメモリーに乗せ、wide変換をするのではなく、reduceByKeyやaggregateByKeyなどのmap-side reductionするwide変換を使用することで、メモリーエラーを防ぎ、スピードアップすることができる。  
+
+
+### GroupByKeyの危険性
+小さいデータの上で、特に入力データにカラムが多くあるが、レコード数は少ない場合では比較的効果的に振る舞う。なぜなら、たった１度だけしかシャッフルが発生しないから、そしてソートがexecutor上のnarrow変換として処理されるためである。１万レコードと２、３千カラムレベルの話ではかなり有効であるが、２、３百万レコードの場合、結果的にmemory execptionで落ちるであろう。  
+このようにスケール上でmemory errorを引き起こす原因として、分散処理ができないiterarorであることが理由にある。  
+全てのデータをdiskから読み込み、memory上に載せようとして高価な処理となってしまう。  
+
+通常、shuffleが走る前にキーの数を減らすmap-side reductionをするaggreagate処理をするのがより良い選択である。  
+その代表格がcombineByKeyである。  
+combineByKeyや全ての集約オペレーションがgroupByKeyよりもmemory errorの観点で優れているものはない。  
+
+### Co-Grouping
+全てのアキュムレータ処理に共通してcombinByKeyを使う実装がされており、全てのjoinはcogroup関数を使用している。  
+Cogroupは複数のRDDをjoinする際に、joinの代替として有効である。  
+だがそのような利点を持っているにもかかわらず、groupByKeyと同様の理由でmemory errorを引き起こす。  
+
+概念的にparitionerはどれほどレコードが分散さているかを定義する。したがって、レコードは各々のtaskで完了する。  
+getPartitionはキーからパーティションの数値インデックをマッピングする。  
+
+### Goldlicks example
+ここで扱うデータはカラム情報を保持しているためSparkSqlを使用することが先に思いつくだろう。  
+だが、SparkSqlではランク集計はサポートされていないため、このケースではSparkCoreを使用する。  
+もちろん、SparkSqlでも実装は可能だがそれでもSparkCoreの方がより良い結果を出してくれる。  
+
+### Goldlicks version:0
+
+最初のアプローチはiterativelyにそれぞれのグループをループし、分散ソートを実行する。その結果１ステージに１高負荷の分散ソートがグループごとに行われる。  
+カラムごとにソート処理を噛ませるプログラムになっており、カラム数が増えればソートの回数も増えとても遅くなっていくことがネックになる事例  
+
+
+### Goldlicks version:1
+次のアプローチは、同じパーティションに同じグループを配置して、groupByKeyを使ってレコードをシャッフルすること。  
+そして、我々はそれぞれのグループの値をmapPartitionを通してソートすることで、１つのステージでそれぞれのグループのソートが可能となった。  
+groupByKeyを使用して比較的簡素なコードとなって、かつ正しい結果が帰ってくることがある程度補償された方法である。だが、groupByKeyの危険性での理由からあまり良い方法とは言えない結論に。  
+
+### Goldlicks version:2
+セカンダリーソートテクニックを使用すると、groupByKeyとrepartitionAndSortWithinPartitions関数を使用したソート、シャッフルステージの最中にそれぞれのグループをsortする作業をプッシュする、と入れ替えることでgroupByKeyソリューションを改善した。  
+だが、もしカラムが比較的長いと、repartitionAndSortWithinPartitions ステップは失敗につながる。なぜなら１つのエグゼキュータに全てのカラムが持つ同じハッシュ値に結びつく全ての値を保持することを要求するためである。  
+
+repartitionAndSortWithinPartitions  
+repartitionがpartitionごとにグループを作り、パーティションごとにsortプログラムを走らせる。  
+
+### Goldlicks version:3
+次に、グループごとというよりはそれぞれのレコードの値上で一度だけsortする問題を解消することが可能であると発覚した。  
+値ごとのレコードをキーにする、全てのレコードをソートする、そして結果を集めるためのnarrow変換のシリーズを実行する。  
+Version2でキーとして使用したそれぞれのグループのサイズよりかは、重複ができるだけ含まれていないことを我々は新しくソートするキーに対して想定している。  
+
+### Goldlicks version:4
+最終的に、それぞれのグループでレコードの超複数が高いことに気づき、ソートする前にmap-side reductionをソリューションの前に実施した。  
+このソリューションの結果は我々の入り込んだクライアントデータに良い結果をもたらした。  
+結局はwide変換を使用せず、Narrow変換をpartitionごとにsortやdistinct処理をして最終的にcollect()することが最良としたコードだった。  
+
+
+### 変換する際の重要点の整理
+* Narrow 変換は素早くそして並行化しやすい。
+* Wide 変換はたくさんのユニークキーがある場合に有効である。
+* sortByKeyはpartitionに対して実行する分には良い。
+* mapPartitionは全パーティションがメモリーにロードされることを防ぐ。
+
+入力partition上でグルーピングすることで重複キーを集約するnarrow transformationwは、重複する値がカラムにある場合のみ有効であって、全てがユニークな値の場合、このオペレーションはなんの利益もなくメモリーエラーを引き起こす原因となる、  
 
