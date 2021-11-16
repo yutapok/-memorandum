@@ -37,6 +37,7 @@
 
 
   ```
+  ![ApacheSparkでパフォーマンス上げたい時のやつ_f](https://user-images.githubusercontent.com/26620426/141964890-389a947b-3e83-4a02-b7c5-d697caff9ba2.png)
 
 - ポイント
   - データセットをいくつかのデータ群に分けることが可能で
@@ -59,6 +60,7 @@
   - 多数サーバーを用意できて、サーバーを増やす分だけスケールする処理のときに有効
   - shuffleによって（特定のKeyでデータを集約する）、Reduce後にデータ全体の整合性を取ることが可能
 
+![ApacheSparkでパフォーマンス上げたい時のやつ-m](https://user-images.githubusercontent.com/26620426/141965072-f17ef237-ee13-4d8c-b090-b3d85453b1d1.png)
 
 
 ## HadoopとSparkの関係について
@@ -72,12 +74,15 @@
   - HadoopのようにReduceした結果をDiskへ書き込む事なくインメモリの状態で、更に次のMap処理をそのデータセットに対して行なうことが可能
 - Map -> Reduceの反復ではなく、変換の連続 Map -> Map -> Map -> Reduceといった処理をより柔軟に実装できるようになった 
 
+![ApacheSparkでパフォーマンス上げたい時のやつ-s](https://user-images.githubusercontent.com/26620426/141965202-2c08e63a-962b-47f7-8c94-9133b5d63e94.png)
+
+
 ## 関連
 - どちらもMapReduceを基本とした処理系から発展したフレームワーク
 - 複数のコンピューター上で動くことと処理がスケールすることが前提
 - SparkはHadoopのMapReduceがFileIOが前提であること、Map -> Reduceに処理が固定されて柔軟ではなかったことをRDDによって解消したフレームワーク
 
-
+![ApacheSparkでパフォーマンス上げたい時のやつ-ms](https://user-images.githubusercontent.com/26620426/141965226-78a4fcb3-a84c-457b-a3ec-d910500a1473.png)
 
 # Sparkのデータ型 RDD/DataFrame/Dataset
 - 違いはいろんな記事がWebにあるので割愛
@@ -111,10 +116,12 @@
 
 ## Narrow Transformation
 - Narrow Dependency(変換の際にシャッフルを必要としない)の状態で変換を重ねていくこと
+  - [NarrowDependencyとは](https://image.slidesharecdn.com/apachespark101-170216211852/95/apache-spark-101-demi-benari-35-638.jpg?cb=1487279996)
   - Partition間でのDependencyを下げる変換をしていく
     - 1 Partition内のレコードを減らす
       - 重複削除、畳み込みでレコードを束ねて減らす
-  - mapPartitionsやcoalesceがそれに当たる  
+  - mapPartitionsやcoalesceがそれに当たる
+ 
 
 ### Narrow/Wide Dependency
 - Narrow Dependency
@@ -140,8 +147,19 @@
 
 ## 結論
 - shuffleなどのNetworkIOコストをDataframe or DatasetのOptimizerで抑えつつ、Narrow Transformationの観点からmapPartitionsを選択肢として使えるDatasetがベター
-  - そのためDataFrameがベストなチョイスとなるpySparkは一旦は選択肢から外れる
-    - 構造化されたデータのみを扱う or Wide TransformationのCostが低いことがあらかじめわかっているならベター
+  - パフォーマンスを最大限出したい場合はScala
+    - Scalaで記述されたRDDをmapPartitionsで操作する際にオバーヘッドがかからない
+  - DataFrameがベストなチョイスとなるpySparkは一旦は選択肢から外れる
+    - 課題が分析だったり、構造化されたデータのみを扱う or Wide TransformationのCostが低いことがあらかじめわかっているならベター
     - ScalaでもDataframeの利用は可能なため、扱うデータと実装する処理に応じて後から調整すればよい
-  - 必要になればRDD/DataFrameへの変換は容易に可能
+    - アプリ開発の場合、pySparkを使わなくてもPythonプログラムをコンテナなどでスケールすれば同じ処理を得られないかをまずは検討
+- Spark3から導入された AEQでSparkSql（Dataframe/Dataset)のシャッフルとJoinの実行プランが向上したらしい
+  - 以前と比べてJoinやGroupByが高速化されているような気がした
+    - もし将来WideDependencyを考慮しなくてもよくなったら、もう一度ブームが来そうな予感がする
+  - https://databricks.com/jp/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html
 
+# 参考
+- HighPerformanceSpark
+  - https://www.amazon.co.jp/High-Performance-Spark-Practices-Optimizing/dp/1491943203/ref=sr_1_1?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&keywords=high+performance+spark&qid=1637057697&sr=8-1
+  - 個人用メモ
+    - https://github.com/yutapok/-memorandum/blob/master/HighPerformanceSpark.md
